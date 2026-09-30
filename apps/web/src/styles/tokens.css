@@ -3,26 +3,26 @@
  * A restyle (or a dark theme) means editing these values, not components.
  */
 :root {
-  /* Color — semantic, not palette names */
-  --color-bg: #f7f8fa;
+  /* Color — semantic, not palette names. Palette: Aceve brand greens + orange. */
+  --color-bg: #f5f8f5;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
-  --color-surface-sunken: #eef0f3;
-  --color-border: #e3e6ea;
-  --color-border-strong: #c9ced6;
-  --color-text: #16181d;
-  --color-text-muted: #5f6672;
-  --color-text-faint: #9aa1ac;
-  --color-accent: #4f46e5;
-  --color-accent-hover: #4338ca;
-  --color-accent-soft: #eef0fe;
+  --color-surface-sunken: #e3ece5;
+  --color-border: #dbe5dd;
+  --color-border-strong: #bfcfc3;
+  --color-text: #152f1a;
+  --color-text-muted: #595959;
+  --color-text-faint: #a6a6a6;
+  --color-accent: #2f753b;
+  --color-accent-hover: #24462a;
+  --color-accent-soft: #ebf3ed;
   --color-on-accent: #ffffff;
-  --color-success: #16a34a;
-  --color-success-soft: #e8f7ee;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fdeaea;
-  --color-warning: #d97706;
-  --color-overlay: rgba(22, 24, 29, 0.5);
+  --color-success: #10b981;
+  --color-success-soft: #d1fae5;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fee2e2;
+  --color-warning: #cc4900;
+  --color-overlay: rgba(21, 47, 26, 0.55);
   --color-team-red: #dc4a4a;
   --color-team-blue: #3b76e0;
   --color-arena: #eef4fb;
@@ -74,5 +74,5 @@
   --motion-ease: cubic-bezier(0.2, 0, 0.2, 1);
 
   /* Focus */
-  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.35);
+  --focus-ring: 0 0 0 3px rgba(47, 117, 59, 0.35);
 }
