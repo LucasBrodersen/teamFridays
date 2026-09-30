@@ -1,0 +1,15 @@
+# Render Blueprint — creates the Team Fridays web service on the free plan.
+# One Node process: the server serves the built frontend and the Socket.IO API.
+# Free-plan note: the service sleeps after ~15 min idle and cold-starts in
+# under a minute; in-memory rooms are lost on sleep (they are ephemeral anyway).
+services:
+  - type: web
+    name: team-fridays
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
