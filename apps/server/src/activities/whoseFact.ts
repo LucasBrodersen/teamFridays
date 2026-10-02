@@ -1,9 +1,4 @@
-import {
-  WHOSE_FACT_NAME_OPTIONS,
-  type ActivityAction,
-  type ActivityConfig,
-  type WhoseFactView,
-} from '@team-fridays/shared'
+import type { ActivityAction, ActivityConfig, WhoseFactView } from '@team-fridays/shared'
 import {
   ActivityError,
   requireActive,
@@ -33,16 +28,8 @@ function currentAuthorId(state: WhoseFactState): string {
 }
 
 function rollOptions(state: WhoseFactState, ctx: ActivityCtx): void {
-  const author = state.order[state.currentIndex]
-  if (!author) {
-    state.options = []
-    return
-  }
-  const decoys = shuffle(ctx.activeIds.filter((id) => id !== author)).slice(
-    0,
-    WHOSE_FACT_NAME_OPTIONS - 1,
-  )
-  state.options = shuffle([author, ...decoys])
+  // Everyone is a suspect, in a fresh shuffled order each round.
+  state.options = state.order[state.currentIndex] ? shuffle([...ctx.activeIds]) : []
 }
 
 export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {

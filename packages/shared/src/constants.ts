@@ -1,6 +1,4 @@
 export const NAME_MAX_LENGTH = 10
-/** Suspect names offered per Whose Fact round: the author + sampled decoys. */
-export const WHOSE_FACT_NAME_OPTIONS = 5
 export const QUESTION_MAX_LENGTH = 200
 export const ANSWER_MAX_LENGTH = 240
 export const STATEMENT_MAX_LENGTH = 160
