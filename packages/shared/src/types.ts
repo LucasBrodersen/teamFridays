@@ -269,6 +269,8 @@ export interface WhoseFactView {
     total: number
     /** The fact on display — its author stays hidden until the reveal. */
     fact: string
+    /** Who to suspect: the author plus sampled decoys, shuffled. */
+    options: string[]
     youAreAuthor: boolean
     votedIds: string[]
     yourVote: string | null

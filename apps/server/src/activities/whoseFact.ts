@@ -1,4 +1,9 @@
-import type { ActivityAction, ActivityConfig, WhoseFactView } from '@team-fridays/shared'
+import {
+  WHOSE_FACT_NAME_OPTIONS,
+  type ActivityAction,
+  type ActivityConfig,
+  type WhoseFactView,
+} from '@team-fridays/shared'
 import {
   ActivityError,
   requireActive,
@@ -14,6 +19,8 @@ export interface WhoseFactState {
   facts: Map<string, string>
   order: string[]
   currentIndex: number
+  /** Suspect choices for the current round: the author + sampled decoys. */
+  options: string[]
   /** voterId -> suspected authorId, for the current round only. */
   votes: Map<string, string>
   scores: Map<string, number>
@@ -23,6 +30,19 @@ function currentAuthorId(state: WhoseFactState): string {
   const id = state.order[state.currentIndex]
   if (!id) throw new ActivityError('No current fact')
   return id
+}
+
+function rollOptions(state: WhoseFactState, ctx: ActivityCtx): void {
+  const author = state.order[state.currentIndex]
+  if (!author) {
+    state.options = []
+    return
+  }
+  const decoys = shuffle(ctx.activeIds.filter((id) => id !== author)).slice(
+    0,
+    WHOSE_FACT_NAME_OPTIONS - 1,
+  )
+  state.options = shuffle([author, ...decoys])
 }
 
 export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {
@@ -35,6 +55,7 @@ export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {
       facts: new Map(),
       order: [],
       currentIndex: 0,
+      options: [],
       votes: new Map(),
       scores: new Map(),
     }
@@ -56,14 +77,15 @@ export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {
         state.currentIndex = 0
         state.votes.clear()
         state.phase = 'guessing'
+        rollOptions(state, ctx)
         return
       case 'whose-fact/vote':
         requireActive(actor, ctx)
         if (state.phase !== 'guessing') throw new ActivityError('Voting is not open')
         if (actor.id === currentAuthorId(state))
           throw new ActivityError('That one is yours — sit tight and look innocent')
-        if (!ctx.activeIds.includes(action.suspectId))
-          throw new ActivityError('Unknown participant')
+        if (!state.options.includes(action.suspectId))
+          throw new ActivityError('Pick one of the listed names')
         state.votes.set(actor.id, action.suspectId)
         return
       case 'whose-fact/reveal': {
@@ -82,6 +104,7 @@ export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {
         state.currentIndex += 1
         state.votes.clear()
         state.phase = state.currentIndex >= state.order.length ? 'results' : 'guessing'
+        if (state.phase === 'guessing') rollOptions(state, ctx)
         return
       default:
         throw new ActivityError('Invalid action for this activity')
@@ -102,6 +125,7 @@ export const whoseFact: ActivityDefinition<WhoseFactState, WhoseFactView> = {
               number: state.currentIndex + 1,
               total: state.order.length,
               fact: state.facts.get(author) ?? '',
+              options: [...state.options],
               youAreAuthor: viewerId === author,
               votedIds: [...state.votes.keys()],
               yourVote: viewerId ? (state.votes.get(viewerId) ?? null) : null,

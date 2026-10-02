@@ -20,7 +20,10 @@ const canWrite = computed(() => props.view.phase === 'collecting' && isActive.va
 const canVote = computed(
   () => props.view.phase === 'guessing' && isActive.value && !props.view.round?.youAreAuthor,
 )
-const suspects = computed(() => room.participants.filter((p) => !p.spectator))
+// The server samples the author + a few decoys per round.
+const suspects = computed(() =>
+  (props.view.round?.options ?? []).map((id) => ({ id, name: room.nameOf(id) })),
+)
 
 function submitFact(): void {
   const text = draftFact.value.trim()

@@ -31,6 +31,45 @@ describe('whose fact is this', () => {
     )
   })
 
+  it('samples 5 name options per round, always containing the author', () => {
+    const bigCtx = { activeIds: ['h', 'a', 'b', 'c', 'd', 'e', 'f', 'g'] }
+    const state = whoseFact.create({ type: 'whose-fact' }, bigCtx)
+    for (const id of bigCtx.activeIds)
+      whoseFact.action(
+        state,
+        { kind: 'whose-fact/submit-fact', text: `fact of ${id}` },
+        { id, isHost: id === 'h', spectator: false },
+        bigCtx,
+      )
+    whoseFact.action(state, { kind: 'whose-fact/start' }, host, bigCtx)
+    for (let i = 0; i < bigCtx.activeIds.length; i++) {
+      const author = state.order[i]!
+      expect(state.options).toHaveLength(5)
+      expect(state.options).toContain(author)
+      expect(new Set(state.options).size).toBe(5) // no duplicate names
+      // Voting outside the offered names is rejected.
+      const offMenu = bigCtx.activeIds.find((id) => !state.options.includes(id) && id !== author)!
+      const voter = bigCtx.activeIds.find((id) => id !== author)!
+      expect(() =>
+        whoseFact.action(
+          state,
+          { kind: 'whose-fact/vote', suspectId: offMenu },
+          { id: voter, isHost: voter === 'h', spectator: false },
+          bigCtx,
+        ),
+      ).toThrow(ActivityError)
+      whoseFact.action(
+        state,
+        { kind: 'whose-fact/vote', suspectId: author },
+        { id: voter, isHost: voter === 'h', spectator: false },
+        bigCtx,
+      )
+      whoseFact.action(state, { kind: 'whose-fact/reveal' }, host, bigCtx)
+      whoseFact.action(state, { kind: 'whose-fact/next' }, host, bigCtx)
+    }
+    expect(state.phase).toBe('results')
+  })
+
   it('shows the fact but NEVER its author before the reveal', () => {
     const state = started()
     const author = state.order[0]!
