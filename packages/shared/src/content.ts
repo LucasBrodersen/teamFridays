@@ -39,6 +39,11 @@ export const ACTIVITY_PLAYER_GUIDE: Record<ActivityType, ActivityPlayerGuide> = 
     tooManyNote: 'One clue-giver turn per person — long above 10. End early anytime.',
   },
   territory: { label: '4–20 players', best: [4, 20] },
+  tennis: {
+    label: '2–4 on court',
+    best: [2, 4],
+    tooManyNote: 'Four play per match, drawn at random — everyone else watches. Rematches redraw the court.',
+  },
 }
 
 export const ICEBREAKER_QUESTIONS: string[] = [

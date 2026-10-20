@@ -5,6 +5,7 @@ import { herd } from './herd'
 import { howMany } from './howMany'
 import { icebreaker } from './icebreaker'
 import { snowfight } from './snowfight'
+import { tennis } from './tennis'
 import { territory } from './territory'
 import { thisOrThat } from './thisOrThat'
 import { twoTruths } from './twoTruths'
@@ -26,4 +27,5 @@ export const activityRegistry: Record<ActivityType, ActivityDefinition<never>> =
   undercover: undercover as ActivityDefinition<never>,
   wavelength: wavelength as ActivityDefinition<never>,
   territory: territory as ActivityDefinition<never>,
+  tennis: tennis as ActivityDefinition<never>,
 }

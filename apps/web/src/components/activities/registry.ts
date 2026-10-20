@@ -5,6 +5,7 @@ import HerdPanel from './HerdPanel.vue'
 import HowManyPanel from './HowManyPanel.vue'
 import IcebreakerPanel from './IcebreakerPanel.vue'
 import SnowfightPanel from './SnowfightPanel.vue'
+import TennisPanel from './TennisPanel.vue'
 import TerritoryPanel from './TerritoryPanel.vue'
 import ThisOrThatPanel from './ThisOrThatPanel.vue'
 import TwoTruthsPanel from './TwoTruthsPanel.vue'
@@ -26,4 +27,5 @@ export const activityPanels: Record<ActivityType, Component> = {
   undercover: UndercoverPanel,
   wavelength: WavelengthPanel,
   territory: TerritoryPanel,
+  tennis: TennisPanel,
 }

@@ -9,6 +9,7 @@ import {
   STATEMENT_MAX_LENGTH,
 } from './constants'
 import { SNOWFIGHT } from './snowfight'
+import { TENNIS } from './tennis'
 
 export const nameSchema = z.string().trim().min(1, 'Name is required').max(NAME_MAX_LENGTH)
 
@@ -46,6 +47,7 @@ export const activityConfigSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('undercover') }),
   z.object({ type: z.literal('wavelength') }),
   z.object({ type: z.literal('territory') }),
+  z.object({ type: z.literal('tennis') }),
 ])
 
 const participantIdSchema = z.string().min(1).max(80)
@@ -134,4 +136,12 @@ export const activityActionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('territory/start') }),
   z.object({ kind: z.literal('territory/move'), dx: inputAxis, dy: inputAxis }),
   z.object({ kind: z.literal('territory/restart') }),
+  z.object({ kind: z.literal('tennis/start') }),
+  z.object({ kind: z.literal('tennis/move'), dx: inputAxis, dy: inputAxis }),
+  z.object({
+    kind: z.literal('tennis/hit'),
+    x: z.number().min(0).max(TENNIS.COURT_WIDTH),
+    y: z.number().min(0).max(TENNIS.COURT_HEIGHT),
+  }),
+  z.object({ kind: z.literal('tennis/restart') }),
 ])

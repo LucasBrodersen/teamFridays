@@ -177,6 +177,21 @@ const revealWho = ref(true)
       </UiCard>
 
       <UiCard class="option">
+        <h3 class="name">Tennis 🎾</h3>
+        <div class="fit">
+          <UiBadge>👥 {{ ACTIVITY_PLAYER_GUIDE['tennis'].label }}</UiBadge>
+          <span v-if="fitNote('tennis')" class="fit-note">{{ fitNote('tennis') }}</span>
+        </div>
+        <p class="desc">
+          1v1 or 2v2 on a real court: move, aim, and click to hit. Tennis scoring, first to two
+          games — the room watches the showdown.
+        </p>
+        <div class="actions single">
+          <UiButton @click="room.startActivity({ type: 'tennis' })">Start</UiButton>
+        </div>
+      </UiCard>
+
+      <UiCard class="option">
         <h3 class="name">Snowball Fight ❄️</h3>
         <div class="fit">
           <UiBadge>👥 {{ ACTIVITY_PLAYER_GUIDE['snowfight'].label }}</UiBadge>

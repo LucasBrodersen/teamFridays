@@ -31,6 +31,7 @@ export type ActivityType =
   | 'undercover'
   | 'wavelength'
   | 'territory'
+  | 'tennis'
 
 // ---------- Activity configs (sent by the host on activity:start) ----------
 
@@ -74,6 +75,9 @@ export interface WavelengthConfig {
 export interface TerritoryConfig {
   type: 'territory'
 }
+export interface TennisConfig {
+  type: 'tennis'
+}
 
 export type ActivityConfig =
   | IcebreakerConfig
@@ -87,6 +91,7 @@ export type ActivityConfig =
   | UndercoverConfig
   | WavelengthConfig
   | TerritoryConfig
+  | TennisConfig
 
 // ---------- Activity actions (participant/host interactions) ----------
 
@@ -144,6 +149,10 @@ export type ActivityAction =
   | { kind: 'territory/start' }
   | { kind: 'territory/move'; dx: -1 | 0 | 1; dy: -1 | 0 | 1 }
   | { kind: 'territory/restart' }
+  | { kind: 'tennis/start' }
+  | { kind: 'tennis/move'; dx: -1 | 0 | 1; dy: -1 | 0 | 1 }
+  | { kind: 'tennis/hit'; x: number; y: number }
+  | { kind: 'tennis/restart' }
 
 // ---------- Per-participant activity views ----------
 // These are computed on the server per viewer. Hidden information (unrevealed
@@ -383,6 +392,22 @@ export interface TerritoryView {
   winner: SnowfightTeam | 'draw' | null
 }
 
+export interface TennisView {
+  type: 'tennis'
+  phase: 'lobby' | 'countdown' | 'playing' | 'finished'
+  countdownSeconds: number
+  /** The up-to-4 players drawn onto the court; everyone else spectates. */
+  players: { id: string; team: SnowfightTeam; x: number; y: number }[]
+  ball: { x: number; y: number; heldBy: string | null } | null
+  /** Tennis point labels: '0' | '15' | '30' | '40'. */
+  points: { red: string; blue: string }
+  games: { red: number; blue: number }
+  serveTeam: SnowfightTeam | null
+  /** 'Point — Team red!' / 'Game — Team blue!' style interstitials. */
+  banner: string | null
+  winner: SnowfightTeam | null
+}
+
 export type ActivityView =
   | IcebreakerView
   | ThisOrThatView
@@ -395,3 +420,4 @@ export type ActivityView =
   | UndercoverView
   | WavelengthView
   | TerritoryView
+  | TennisView

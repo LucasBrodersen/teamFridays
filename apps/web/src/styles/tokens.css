@@ -27,6 +27,9 @@
   --color-team-blue: #3b76e0;
   --color-arena: #eef4fb;
   --color-arena-line: #d7e2ef;
+  --color-court: #4b8a5a;
+  --color-court-line: #e9f2ea;
+  --color-ball: #f0e04a;
 
   /* Typography */
   --font-family:
