@@ -85,6 +85,21 @@ describe('movement and hitting', () => {
     ).toThrow(ActivityError) // still swinging
   })
 
+  it('reports the hitter as mid-swing briefly, and nobody at match start', () => {
+    const state = playing()
+    const view0 = tennis.view(state, null, ctx)
+    expect(view0.players.every((p) => !p.swinging)).toBe(true)
+    const srv = server(state)
+    tennis.action(state, { kind: 'tennis/hit', x: 400, y: 250 }, actorById(srv.id), ctx)
+    expect(
+      tennis.view(state, null, ctx).players.find((p) => p.id === srv.id)?.swinging,
+    ).toBe(true)
+    for (let i = 0; i < TENNIS.SWING_TICKS + 1; i++) tick(state)
+    expect(
+      tennis.view(state, null, ctx).players.find((p) => p.id === srv.id)?.swinging,
+    ).toBe(false)
+  })
+
   it('rejects swings when the loose ball is out of reach', () => {
     const state = playing()
     const srv = server(state)

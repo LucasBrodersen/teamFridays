@@ -397,7 +397,7 @@ export interface TennisView {
   phase: 'lobby' | 'countdown' | 'playing' | 'finished'
   countdownSeconds: number
   /** The up-to-4 players drawn onto the court; everyone else spectates. */
-  players: { id: string; team: SnowfightTeam; x: number; y: number }[]
+  players: { id: string; team: SnowfightTeam; x: number; y: number; swinging: boolean }[]
   ball: { x: number; y: number; heldBy: string | null } | null
   /** Tennis point labels: '0' | '15' | '30' | '40'. */
   points: { red: string; blue: string }

@@ -88,7 +88,7 @@ function freshState(ctx: ActivityCtx): TennisState {
       y: (COURT_HEIGHT * counts[team]) / (perTeam[team] + 1),
       dx: 0,
       dy: 0,
-      lastHitTick: -HIT_COOLDOWN_TICKS,
+      lastHitTick: -1000,
     })
   })
   return {
@@ -299,6 +299,8 @@ export const tennis: ActivityDefinition<TennisState, TennisView> = {
         team: p.team,
         x: Math.round(p.x),
         y: Math.round(p.y),
+        swinging:
+          state.phase === 'playing' && state.tickCount - p.lastHitTick < TENNIS.SWING_TICKS,
       })),
       ball:
         state.phase === 'playing' || state.phase === 'finished'

@@ -12,6 +12,8 @@ export const TENNIS = {
   /** How close the ball must be to swing at it. */
   HIT_REACH: 90,
   HIT_COOLDOWN_TICKS: 5,
+  /** How long a player is reported as mid-swing after hitting (for animation). */
+  SWING_TICKS: 6,
   /** Players cannot cross closer than this to the net. */
   NET_MARGIN: 30,
   MAX_PLAYERS: 4,

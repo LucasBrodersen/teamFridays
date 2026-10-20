@@ -101,6 +101,8 @@ function onCanvasClick(e: MouseEvent): void {
     Math.max(((e.clientY - rect.top) / rect.height) * COURT_HEIGHT, 0),
     COURT_HEIGHT,
   )
+  // Start our own swing animation immediately — no server round-trip lag.
+  swingStart.set(me.value.id, performance.now())
   room.sendAction({ kind: 'tennis/hit', x, y })
 }
 
@@ -108,6 +110,9 @@ function onCanvasClick(e: MouseEvent): void {
 
 const displayed = new Map<string, { x: number; y: number }>()
 const ballTrail: { x: number; y: number }[] = []
+/** Swing animation start times (performance.now) per player. */
+const swingStart = new Map<string, number>()
+const SWING_MS = 280
 let raf = 0
 
 // Deterministic pixel-sprite looks per player, like the avatar colors.
@@ -129,6 +134,7 @@ function drawSprite(
   shirt: string,
   name: string,
   isYou: boolean,
+  swingPhase: number | null,
 ): void {
   const h = nameHash(name)
   const skin = SKIN_TONES[h % SKIN_TONES.length] as string
@@ -165,22 +171,31 @@ function drawSprite(
   px(-3, 7, 2, 1.2, '#f4f4f4') // shoes
   px(1, 7, 2, 1.2, '#f4f4f4')
 
-  // The racket, on the net-facing side.
-  const handX = cx + dir * 5 * s
-  const headX = handX + dir * 3 * s
-  const headY = cy - 3 * s
+  // The racket, on the net-facing side, rotating around the hand mid-swing:
+  // a quick wind-back, then the whip forward across the body.
+  let swingAngle = 0
+  if (swingPhase !== null) {
+    swingAngle =
+      swingPhase < 0.25
+        ? -1.1 * (swingPhase / 0.25)
+        : -1.1 + 2.3 * ((swingPhase - 0.25) / 0.75)
+  }
+  g.save()
+  g.translate(cx + dir * 5 * s, cy - 0.5 * s)
+  g.rotate(dir * swingAngle)
   g.strokeStyle = '#8a5a2a'
   g.lineWidth = 2.5
   g.beginPath()
-  g.moveTo(handX, cy - 0.5 * s)
-  g.lineTo(headX, headY + 2 * s)
+  g.moveTo(0, 0)
+  g.lineTo(dir * 3 * s, -2.5 * s)
   g.stroke()
   g.beginPath()
-  g.ellipse(headX + dir * 1.2 * s, headY, 3 * s, 4 * s, dir * 0.5, 0, Math.PI * 2)
+  g.ellipse(dir * 4.2 * s, -4 * s, 3 * s, 4 * s, dir * 0.5, 0, Math.PI * 2)
   g.fillStyle = 'rgba(255,255,255,0.4)'
   g.fill()
   g.strokeStyle = '#b5742e'
   g.stroke()
+  g.restore()
   g.lineWidth = 1
 }
 
@@ -267,7 +282,26 @@ function draw(): void {
       pos.y += (p.y - pos.y) * 0.45
     }
     const name = room.nameOf(p.id)
-    drawSprite(g, pos.x, pos.y, p.team, teamColor[p.team], name, p.id === room.you?.participantId)
+    // Server says who is mid-swing; the local click already started ours.
+    const now = performance.now()
+    if (p.swinging && !swingStart.has(p.id)) swingStart.set(p.id, now)
+    const started = swingStart.get(p.id)
+    let swingPhase: number | null = null
+    if (started !== undefined) {
+      const elapsed = now - started
+      if (elapsed < SWING_MS) swingPhase = elapsed / SWING_MS
+      else if (!p.swinging) swingStart.delete(p.id)
+    }
+    drawSprite(
+      g,
+      pos.x,
+      pos.y,
+      p.team,
+      teamColor[p.team],
+      name,
+      p.id === room.you?.participantId,
+      swingPhase,
+    )
     g.fillStyle = token('--color-court-line')
     g.font = `500 10px ${token('--font-family')}`
     g.textAlign = 'center'
