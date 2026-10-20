@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { TENNIS, type TennisView } from '@team-fridays/shared'
-import { initials } from '../../lib/avatar'
 import { useRoomStore } from '../../stores/room'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
@@ -108,7 +107,82 @@ function onCanvasClick(e: MouseEvent): void {
 // ---------- Rendering ----------
 
 const displayed = new Map<string, { x: number; y: number }>()
+const ballTrail: { x: number; y: number }[] = []
 let raf = 0
+
+// Deterministic pixel-sprite looks per player, like the avatar colors.
+const SKIN_TONES = ['#f2c9a0', '#e0a878', '#c68a5a', '#8d5a3a']
+const HAIR_TONES = ['#2b1c12', '#5a3a1e', '#c9a24a', '#8d8d8d', '#a33c2a']
+
+function nameHash(name: string): number {
+  let h = 0
+  for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) | 0
+  return Math.abs(h)
+}
+
+/** SNES-style tennis player: pixel body in team colors, racket facing the net. */
+function drawSprite(
+  g: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  team: 'red' | 'blue',
+  shirt: string,
+  name: string,
+  isYou: boolean,
+): void {
+  const h = nameHash(name)
+  const skin = SKIN_TONES[h % SKIN_TONES.length] as string
+  const hair = HAIR_TONES[(h >> 4) % HAIR_TONES.length] as string
+  const dir = team === 'red' ? 1 : -1
+  const s = 2.4 // pixel unit
+  const px = (col: number, row: number, w: number, rows: number, color: string) => {
+    g.fillStyle = color
+    g.fillRect(cx + col * s, cy + row * s, w * s, rows * s)
+  }
+
+  // Ground shadow (and a white halo for "you").
+  g.beginPath()
+  g.ellipse(cx, cy + 8.5 * s, 6.5 * s, 2 * s, 0, 0, Math.PI * 2)
+  g.fillStyle = 'rgba(0,0,0,0.25)'
+  g.fill()
+  if (isYou) {
+    g.beginPath()
+    g.ellipse(cx, cy + 8.5 * s, 8 * s, 2.8 * s, 0, 0, Math.PI * 2)
+    g.strokeStyle = token('--color-court-line')
+    g.lineWidth = 2
+    g.stroke()
+    g.lineWidth = 1
+  }
+
+  px(-3, -8, 6, 2, hair) // hair
+  px(-3, -6, 6, 3, skin) // face
+  px(-4, -3, 8, 4, shirt) // shirt
+  px(dir === 1 ? -5 : 4, -3, 1, 3, skin) // off arm
+  px(dir === 1 ? 4 : -5, -3, 1, 3, skin) // racket arm
+  px(-3, 1, 6, 2, '#3a3f4a') // shorts
+  px(-3, 3, 2, 4, skin) // legs
+  px(1, 3, 2, 4, skin)
+  px(-3, 7, 2, 1.2, '#f4f4f4') // shoes
+  px(1, 7, 2, 1.2, '#f4f4f4')
+
+  // The racket, on the net-facing side.
+  const handX = cx + dir * 5 * s
+  const headX = handX + dir * 3 * s
+  const headY = cy - 3 * s
+  g.strokeStyle = '#8a5a2a'
+  g.lineWidth = 2.5
+  g.beginPath()
+  g.moveTo(handX, cy - 0.5 * s)
+  g.lineTo(headX, headY + 2 * s)
+  g.stroke()
+  g.beginPath()
+  g.ellipse(headX + dir * 1.2 * s, headY, 3 * s, 4 * s, dir * 0.5, 0, Math.PI * 2)
+  g.fillStyle = 'rgba(255,255,255,0.4)'
+  g.fill()
+  g.strokeStyle = '#b5742e'
+  g.stroke()
+  g.lineWidth = 1
+}
 
 function token(name: string): string {
   return getComputedStyle(canvasEl.value ?? document.documentElement)
@@ -154,6 +228,33 @@ function draw(): void {
   drawCourt(g)
   const teamColor = { red: token('--color-team-red'), blue: token('--color-team-blue') }
 
+  // Racket-reach ring around YOUR player: dashed while idle, lit when the
+  // ball is hittable right now (uses last frame's smoothed positions).
+  const myPos = me.value ? displayed.get(me.value.id) : undefined
+  const ballPos = displayed.get('__ball')
+  if (myPos && view.phase === 'playing' && view.ball) {
+    const hittable =
+      view.ball.heldBy === me.value!.id ||
+      (view.ball.heldBy === null &&
+        ballPos !== undefined &&
+        Math.hypot(ballPos.x - myPos.x, ballPos.y - myPos.y) <= HIT_REACH)
+    g.beginPath()
+    g.arc(myPos.x, myPos.y, HIT_REACH, 0, Math.PI * 2)
+    if (hittable) {
+      g.fillStyle = 'rgba(240, 224, 74, 0.14)'
+      g.fill()
+      g.strokeStyle = token('--color-ball')
+      g.lineWidth = 3
+    } else {
+      g.strokeStyle = 'rgba(233, 242, 234, 0.4)'
+      g.lineWidth = 1
+      g.setLineDash([7, 7])
+    }
+    g.stroke()
+    g.setLineDash([])
+    g.lineWidth = 1
+  }
+
   const seen = new Set<string>()
   for (const p of view.players) {
     seen.add(p.id)
@@ -165,27 +266,15 @@ function draw(): void {
       pos.x += (p.x - pos.x) * 0.45
       pos.y += (p.y - pos.y) * 0.45
     }
-    const isYou = p.id === room.you?.participantId
-    g.beginPath()
-    g.arc(pos.x, pos.y, PLAYER_RADIUS, 0, Math.PI * 2)
-    g.fillStyle = teamColor[p.team]
-    g.fill()
-    if (isYou) {
-      g.lineWidth = 3
-      g.strokeStyle = token('--color-court-line')
-      g.stroke()
-      g.lineWidth = 1
-    }
-    g.fillStyle = '#ffffff'
-    g.font = `600 10px ${token('--font-family')}`
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(initials(room.nameOf(p.id)), pos.x, pos.y)
+    const name = room.nameOf(p.id)
+    drawSprite(g, pos.x, pos.y, p.team, teamColor[p.team], name, p.id === room.you?.participantId)
     g.fillStyle = token('--color-court-line')
     g.font = `500 10px ${token('--font-family')}`
-    g.fillText(room.nameOf(p.id), pos.x, pos.y - PLAYER_RADIUS - 8)
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(name, pos.x, pos.y - PLAYER_RADIUS - 14)
   }
-  for (const key of displayed.keys()) if (!seen.has(key)) displayed.delete(key)
+  for (const key of displayed.keys()) if (!seen.has(key) && key !== '__ball') displayed.delete(key)
 
   if (view.ball) {
     let pos = displayed.get('__ball')
@@ -196,6 +285,18 @@ function draw(): void {
       pos.x += (view.ball.x - pos.x) * 0.6
       pos.y += (view.ball.y - pos.y) * 0.6
     }
+    // A short fading trail makes the flight path readable.
+    if (view.ball.heldBy) ballTrail.length = 0
+    else {
+      ballTrail.push({ x: pos.x, y: pos.y })
+      if (ballTrail.length > 7) ballTrail.shift()
+    }
+    ballTrail.forEach((t, i) => {
+      g.beginPath()
+      g.arc(t.x, t.y, BALL_RADIUS * (0.3 + (0.6 * i) / ballTrail.length), 0, Math.PI * 2)
+      g.fillStyle = `rgba(240, 224, 74, ${(0.25 * (i + 1)) / ballTrail.length})`
+      g.fill()
+    })
     g.beginPath()
     g.arc(pos.x, pos.y, BALL_RADIUS, 0, Math.PI * 2)
     g.fillStyle = token('--color-ball')

@@ -8,10 +8,10 @@ export const TENNIS = {
   PLAYER_SPEED: 240,
   BALL_RADIUS: 7,
   /** Units per second. */
-  BALL_SPEED: 470,
+  BALL_SPEED: 390,
   /** How close the ball must be to swing at it. */
-  HIT_REACH: 60,
-  HIT_COOLDOWN_TICKS: 8,
+  HIT_REACH: 90,
+  HIT_COOLDOWN_TICKS: 5,
   /** Players cannot cross closer than this to the net. */
   NET_MARGIN: 30,
   MAX_PLAYERS: 4,
