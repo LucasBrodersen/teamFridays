@@ -63,6 +63,7 @@ export interface TennisState {
   games: { red: number; blue: number }
   serveTeam: SnowfightTeam
   serveIndex: { red: number; blue: number }
+  lastHitTeam: SnowfightTeam | null
   autoServeTicks: number
   pauseTicks: number
   banner: string | null
@@ -101,6 +102,7 @@ function freshState(ctx: ActivityCtx): TennisState {
     games: { red: 0, blue: 0 },
     serveTeam: Math.random() < 0.5 ? 'red' : 'blue',
     serveIndex: { red: 0, blue: 0 },
+    lastHitTeam: null,
     autoServeTicks: AUTO_SERVE_TICKS,
     pauseTicks: 0,
     banner: null,
@@ -108,11 +110,10 @@ function freshState(ctx: ActivityCtx): TennisState {
   }
 }
 
-/** Hand the ball to the next server (round-robin within the serving team). */
+/** Hand the ball to the serving team's current server (same player for the whole game). */
 function startServe(state: TennisState): void {
   const members = [...state.players.values()].filter((p) => p.team === state.serveTeam)
   const server = members[state.serveIndex[state.serveTeam] % members.length] as Player
-  state.serveIndex[state.serveTeam] += 1
   state.ball = { x: server.x, y: server.y, vx: 0, vy: 0, heldBy: server.id }
   state.autoServeTicks = AUTO_SERVE_TICKS
   state.banner = null
@@ -136,10 +137,12 @@ function launch(state: TennisState, hitter: Player, targetX: number, targetY: nu
   state.ball.vx = (nx / norm) * BALL_SPEED
   state.ball.vy = (ny / norm) * BALL_SPEED
   state.ball.heldBy = null
+  state.lastHitTeam = hitter.team
   hitter.lastHitTick = state.tickCount
 }
 
-function scorePoint(state: TennisState, team: SnowfightTeam): void {
+function scorePoint(state: TennisState, team: SnowfightTeam, reason = ''): void {
+  const prefix = reason ? `${reason} ` : ''
   state.points[team] += 1
   if (state.points[team] >= 4) {
     state.games[team] += 1
@@ -147,14 +150,17 @@ function scorePoint(state: TennisState, team: SnowfightTeam): void {
     state.points.blue = 0
     if (state.games[team] >= GAMES_TO_WIN) {
       state.winner = team
-      state.banner = `Game, set, match — Team ${team}! 🏆`
+      state.banner = `${prefix}Game, set, match — Team ${team}! 🏆`
     } else {
-      state.banner = `Game — Team ${team}!`
+      state.banner = `${prefix}Game — Team ${team}!`
     }
+    // Like real tennis: the serve changes sides every game, and the team
+    // that just served rotates to its next server for their next turn.
+    state.serveIndex[state.serveTeam] += 1
+    state.serveTeam = other(state.serveTeam)
   } else {
-    state.banner = `Point — Team ${team}!`
+    state.banner = `${prefix}Point — Team ${team}!`
   }
-  state.serveTeam = other(team)
   state.ball.vx = 0
   state.ball.vy = 0
   state.ball.heldBy = null
@@ -273,15 +279,10 @@ export const tennis: ActivityDefinition<TennisState, TennisView> = {
     } else if (ball.vx !== 0 || ball.vy !== 0) {
       ball.x += ball.vx * DT
       ball.y += ball.vy * DT
-      // Side lines act as walls so rallies stay alive.
-      if (ball.y < BALL_RADIUS) {
-        ball.y = BALL_RADIUS
-        ball.vy = -ball.vy
-      } else if (ball.y > COURT_HEIGHT - BALL_RADIUS) {
-        ball.y = COURT_HEIGHT - BALL_RADIUS
-        ball.vy = -ball.vy
-      }
-      if (ball.x < -BALL_RADIUS) scorePoint(state, 'blue')
+      // Crossing a side line is out: the point goes against whoever hit the ball.
+      if (ball.y < -BALL_RADIUS || ball.y > COURT_HEIGHT + BALL_RADIUS) {
+        scorePoint(state, other(state.lastHitTeam ?? state.serveTeam), 'Out!')
+      } else if (ball.x < -BALL_RADIUS) scorePoint(state, 'blue')
       else if (ball.x > COURT_WIDTH + BALL_RADIUS) scorePoint(state, 'red')
       changed = true
     }

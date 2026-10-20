@@ -112,14 +112,15 @@ describe('movement and hitting', () => {
     ).toThrow(ActivityError)
   })
 
-  it('bounces off the side lines', () => {
+  it('calls a ball crossing the side line out, scoring against the hitter', () => {
     const state = playing()
     const srv = server(state)
-    tennis.action(state, { kind: 'tennis/hit', x: 400, y: 0 }, actorById(srv.id), ctx)
-    const before = state.ball.vy
-    expect(before).toBeLessThan(0)
-    for (let i = 0; i < 60 && state.ball.vy === before; i++) tick(state)
-    expect(state.ball.vy).toBe(-before)
+    const enemy = srv.team === 'red' ? 'blue' : 'red'
+    // Aim almost straight at the side line; the clamp keeps it legal but it flies out.
+    tennis.action(state, { kind: 'tennis/hit', x: srv.x, y: -2000 }, actorById(srv.id), ctx)
+    for (let i = 0; i < 100 && state.pauseTicks === 0; i++) tick(state)
+    expect(state.points[enemy]).toBe(1)
+    expect(state.banner).toContain('Out!')
   })
 
   it('auto-serves when the holder sits on the ball too long', () => {
@@ -142,16 +143,40 @@ describe('scoring', () => {
     tick(state)
   }
 
-  it('scores tennis-style and gives the serve to the team that lost the point', () => {
+  it('scores tennis-style and keeps the same server for the whole game', () => {
     const state = playing()
+    const firstServer = server(state)
+    const servingTeam = state.serveTeam
     concede(state, 'red')
     expect(state.points.blue).toBe(1)
     expect(tennis.view(state, null, ctx).points.blue).toBe('15')
     expect(state.banner).toContain('Point — Team blue')
-    expect(state.serveTeam).toBe('red')
+    expect(state.serveTeam).toBe(servingTeam)
     for (let i = 0; i < PAUSE_TICKS; i++) tick(state)
-    expect(state.ball.heldBy).not.toBeNull()
-    expect(server(state).team).toBe('red')
+    expect(state.ball.heldBy).toBe(firstServer.id)
+  })
+
+  it('hands the serve to the other team after each game, rotating partners', () => {
+    const big = { activeIds: ['h', 'a', 'b', 'c'] }
+    const state = playing(big)
+    const firstServer = server(state)
+    const firstTeam = state.serveTeam
+    for (let p = 0; p < 4; p++) {
+      concede(state, 'red')
+      for (let i = 0; i < PAUSE_TICKS; i++) tick(state, big)
+    }
+    expect(state.games.blue).toBe(1)
+    expect(state.serveTeam).toBe(firstTeam === 'red' ? 'blue' : 'red')
+    expect(server(state).team).toBe(state.serveTeam)
+    for (let p = 0; p < 4; p++) {
+      concede(state, 'blue')
+      for (let i = 0; i < PAUSE_TICKS; i++) tick(state, big)
+    }
+    // 1–1: the first team serves again, now through its other player.
+    expect(state.winner).toBeNull()
+    expect(state.serveTeam).toBe(firstTeam)
+    expect(server(state).team).toBe(firstTeam)
+    expect(server(state).id).not.toBe(firstServer.id)
   })
 
   it('wins a game at the 4th point and the match at 2 games', () => {
